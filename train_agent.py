@@ -81,11 +81,16 @@ if __name__ == "__main__":
     parser.add_argument("--train", action="store_true", help="Train the policy using GA and save it.")
     parser.add_argument("--play", action="store_true", help="Load the best policy and play.")
     parser.add_argument("--filename", type=str, default="best_policy.npy", help="Filename to save/load the best policy.")
+    parser.add_argument("--num_particles", type=int, default=100, help="Number of particles in the PSO algorithm.")
+    parser.add_argument("--num_iterations", type=int, default=1000, help="Number of iterations in the PSO algorithm.")
+    parser.add_argument("--c1", type=float, default=2.0, help="C1 parameter in the PSO algorithm.")
+    parser.add_argument("--c2", type=float, default=2.0, help="C2 parameter in the PSO algorithm.")
+    parser.add_argument("--w", type=float, default=0.7, help="W parameter in the PSO algorithm.")
     args = parser.parse_args()
 
     if args.train:
         # Train and save the best policy
-        best_params = train_and_save(filename=args.filename, num_particles=70, num_iterations=150, c1=2.0, c2=2.0, w=0.7)
+        best_params = train_and_save(filename=args.filename, num_particles=args.num_particles, num_iterations=args.num_iterations, c1=args.c1, c2=args.c2, w=args.w)
     elif args.play:
         # Load and play with the best policy
         best_params = load_policy(args.filename)
