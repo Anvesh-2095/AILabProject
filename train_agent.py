@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     if args.train:
         # Train and save the best policy
-        best_params = train_and_save(filename=args.filename, num_particles=50, num_iterations=100, c1=2.0, c2=2.0, w=0.7)
+        best_params = train_and_save(filename=args.filename, num_particles=70, num_iterations=150, c1=2.0, c2=2.0, w=0.7)
     elif args.play:
         # Load and play with the best policy
         best_params = load_policy(args.filename)
