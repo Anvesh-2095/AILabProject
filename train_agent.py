@@ -20,6 +20,12 @@ def evaluate_policy(params, episodes=3, render=False):
         while not done:
             action = policy_action(params, observation)
             observation, reward, terminated, truncated, info = env.step(action)
+            
+            # Penalize high vertical speed during landing
+            vertical_speed = observation[3]  # Assuming index 3 corresponds to vertical speed
+            if observation[6] or observation[7]:  # Legs have contact with the ground
+                reward -= abs(vertical_speed) * 0.1  # Apply penalty proportional to vertical speed
+            
             episode_reward += reward
             done = terminated or truncated
         env.close()
