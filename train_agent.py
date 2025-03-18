@@ -26,14 +26,26 @@ def evaluate_policy(params, episodes=3, render=False):
         total_reward += episode_reward
     return total_reward / episodes
 
-def pso(num_particles, num_iterations, w, c1, c2):
-    best_params = None
+def pso(num_particles, num_iterations, w, c1, c2, load=False):
+    best_params = None  
     best_reward = -np.inf
     num_params = 8 * 4 + 4
     particles = np.random.rand(num_particles, num_params)
     velocities = np.zeros((num_particles, num_params))
     personal_best_params = particles.copy()
     personal_best_rewards = np.full(num_particles, -np.inf)
+
+    if load and os.path.exists("sav.npz"):
+        print("Loading saved data...")
+        data = np.load("sav.npz", allow_pickle=True)
+        particles = data['particles']
+        velocities = data['velocities']
+        personal_best_params = data['personal_best_params']
+        personal_best_rewards = data['personal_best_rewards']
+        best_params = data['best_params']
+        best_reward = data['best_reward']
+        print(f"Loaded best reward: {best_reward:.2f}")
+
     print("Training the agent using PSO...")
     for i in range(num_particles):
         personal_best_rewards[i] = evaluate_policy(particles[i])
@@ -54,11 +66,13 @@ def pso(num_particles, num_iterations, w, c1, c2):
                 if reward > best_reward:
                     best_reward = reward
                     best_params = particles[i].copy()
+                    np.savez("sav.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
+                    print(f"Saved best reward: {best_reward:.2f}")
         print(f"Iteration {_ + 1}/{num_iterations}, best reward: {best_reward:.2f}")
     return best_params    
 
-def train_and_save(filename, num_particles = 100, num_iterations = 1000, c1 = 2.0, c2 = 2.0, w = 0.7):
-    best_params = pso(num_particles, num_iterations, w, c1, c2)
+def train_and_save(filename, num_particles = 100, num_iterations = 1000, c1 = 2.0, c2 = 2.0, w = 0.7, load = False):
+    best_params = pso(num_particles, num_iterations, w, c1, c2, load)
     np.save(filename, best_params)
     print(f"Saved best policy to {filename}")
     return best_params
@@ -86,11 +100,12 @@ if __name__ == "__main__":
     parser.add_argument("--c1", type=float, default=2.0, help="C1 parameter in the PSO algorithm.")
     parser.add_argument("--c2", type=float, default=2.0, help="C2 parameter in the PSO algorithm.")
     parser.add_argument("--w", type=float, default=0.7, help="W parameter in the PSO algorithm.")
+    parser.add_argument("--load", action="store_true", help="Load the best policy.")
     args = parser.parse_args()
 
     if args.train:
         # Train and save the best policy
-        best_params = train_and_save(filename=args.filename, num_particles=args.num_particles, num_iterations=args.num_iterations, c1=args.c1, c2=args.c2, w=args.w)
+        best_params = train_and_save(filename=args.filename, num_particles=args.num_particles, num_iterations=args.num_iterations, c1=args.c1, c2=args.c2, w=args.w, load = args.load)
     elif args.play:
         # Load and play with the best policy
         best_params = load_policy(args.filename)
