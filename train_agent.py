@@ -26,6 +26,11 @@ def evaluate_policy(params, episodes=3, render=False):
             if observation[6] or observation[7]:  # Legs have contact with the ground
                 reward -= abs(vertical_speed) * 0.1  # Apply penalty proportional to vertical speed
             
+            # Reward for landing near the center
+            horizontal_position = observation[0]  # Assuming index 0 corresponds to horizontal position
+            if observation[6] and observation[7]:  # Both legs have contact with the ground
+                reward += max(0, 10 - abs(horizontal_position) * 5)  # Reward decreases with distance from center
+            
             episode_reward += reward
             done = terminated or truncated
         env.close()
