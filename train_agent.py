@@ -54,12 +54,16 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False):
             best_params = particles[i].copy()
     print(f"Initial best reward: {best_reward:.2f}")
     for _ in range(num_iterations):
+        max_reward = -np.inf
         for i in range(num_particles):
             # Update the velocity
             velocities[i] = w * velocities[i] + c1 * np.random.rand() * (personal_best_params[i] - particles[i]) + c2 * np.random.rand() * (best_params - particles[i])
             particles[i] += velocities[i]
             # Evaluate the new particle
             reward = evaluate_policy(particles[i])
+            if i == 0:
+                max_reward = reward
+            max_reward = max(max_reward, reward)
             if reward > personal_best_rewards[i]:
                 personal_best_rewards[i] = reward
                 personal_best_params[i] = particles[i].copy()
@@ -69,6 +73,7 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False):
                     np.savez("sav.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
                     print(f"Saved best reward: {best_reward:.2f}")
         print(f"Iteration {_ + 1}/{num_iterations}, best reward: {best_reward:.2f}")
+        print(f"Current reward: {max_reward:.2f}")
     return best_params    
 
 def train_and_save(filename, num_particles = 100, num_iterations = 1000, c1 = 2.0, c2 = 2.0, w = 0.7, load = False):
