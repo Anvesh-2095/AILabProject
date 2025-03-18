@@ -26,7 +26,7 @@ def evaluate_policy(params, episodes=3, render=False):
         total_reward += episode_reward
     return total_reward / episodes
 
-def pso(num_particles, num_iterations, w, c1, c2, load=False):
+def pso(num_particles, num_iterations, w, c1, c2, load=False, filename = "best_policy.npy"):
     best_params = None  
     best_reward = -np.inf
     num_params = 8 * 4 + 4
@@ -72,12 +72,14 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False):
                     best_params = particles[i].copy()
                     np.savez("sav.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
                     print(f"Saved best reward: {best_reward:.2f}")
+                    np.save(filename, best_params)
+                    print(f"Saved best policy to {filename}")
         print(f"Iteration {_ + 1}/{num_iterations}, best reward: {best_reward:.2f}")
         print(f"Current reward: {max_reward:.2f}")
     return best_params    
 
 def train_and_save(filename, num_particles = 100, num_iterations = 1000, c1 = 2.0, c2 = 2.0, w = 0.7, load = False):
-    best_params = pso(num_particles, num_iterations, w, c1, c2, load)
+    best_params = pso(num_particles, num_iterations, w, c1, c2, load, filename)
     np.save(filename, best_params)
     print(f"Saved best policy to {filename}")
     return best_params
