@@ -11,33 +11,27 @@ def policy_action(params, observation):
     logits = np.dot(observation, W) + b
     return np.argmax(logits)
 
-# 
-def evaluate_policy_single(params):
+
+def evaluate_policy(policy, policy_action, total_episodes=100):
     total_reward = 0.0
-    env = gym.make('LunarLander-v3')
-    for _ in range(3):  # Default to 3 episodes
+    for _ in range(total_episodes):
+        # Render the first few episodes
+        render_mode =  "rgb_array"
+        env = gym.make("LunarLander-v3", render_mode=render_mode)
         observation, info = env.reset()
         episode_reward = 0.0
         done = False
         while not done:
-            action = policy_action(params, observation)
+            action = policy_action(policy, observation)
             observation, reward, terminated, truncated, info = env.step(action)
-
-            # Penalize high vertical speed during landing
-            vertical_speed = observation[3]
-            if observation[6] or observation[7]:
-                reward -= abs(vertical_speed) * 0.1
-
-            # Reward for landing near the center
-            horizontal_position = observation[0]
-            if observation[6] and observation[7]:
-                reward += max(0, 10 - abs(horizontal_position) * 5)
-
             episode_reward += reward
             done = terminated or truncated
+        env.close()
         total_reward += episode_reward
-    env.close()
-    return total_reward / 3  # Average reward over episodes
+    return total_reward / total_episodes
+
+def evaluate_policy_single(params):
+    return evaluate_policy(params, policy_action)
 
 # def pso(num_particles, num_iterations, w, c1, c2, load=False, filename = "best_policy.npy"):
 #     best_params = None  
@@ -111,11 +105,23 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
         best_reward = data['best_reward']
         print(f"Loaded best reward: {best_reward:.2f}")
 
+    best_avg = -np.inf
+
     print("Training the agent using PSO...")
     with Pool() as pool:  # Create a multiprocessing pool
         for _ in range(num_iterations):
             # Evaluate all particles in parallel
             rewards = pool.map(evaluate_policy_single, particles)
+            total_reward = sum(rewards)
+            avg_reward = total_reward / num_particles
+            if avg_reward > best_avg:
+                best_avg = avg_reward
+                print(f"Best average reward: {best_avg:.2f}")
+                np.savez("sav_best_avg.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
+                print(f"Saved best reward: {best_reward:.2f}")
+                np.save(filename, best_params)
+                print(f"Saved best policy to {"best_avg_policy.npy"}")
+
 
             for i in range(num_particles):
                 reward = rewards[i]
