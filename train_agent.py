@@ -33,58 +33,6 @@ def evaluate_policy(policy, policy_action, total_episodes=100):
 def evaluate_policy_single(params):
     return evaluate_policy(params, policy_action)
 
-# def pso(num_particles, num_iterations, w, c1, c2, load=False, filename = "best_policy.npy"):
-#     best_params = None  
-#     best_reward = -np.inf
-#     num_params = 8 * 4 + 4
-#     particles = np.random.rand(num_particles, num_params)
-#     velocities = np.zeros((num_particles, num_params))
-#     personal_best_params = particles.copy()
-#     personal_best_rewards = np.full(num_particles, -np.inf)
-
-#     if load and os.path.exists("sav.npz"):
-#         print("Loading saved data...")
-#         data = np.load("sav.npz", allow_pickle=True)
-#         particles = data['particles']
-#         velocities = data['velocities']
-#         personal_best_params = data['personal_best_params']
-#         personal_best_rewards = data['personal_best_rewards']
-#         best_params = data['best_params']
-#         best_reward = data['best_reward']
-#         print(f"Loaded best reward: {best_reward:.2f}")
-
-#     print("Training the agent using PSO...")
-#     for i in range(num_particles):
-#         personal_best_rewards[i] = evaluate_policy(particles[i])
-#         if personal_best_rewards[i] > best_reward:
-#             best_reward = personal_best_rewards[i]
-#             best_params = particles[i].copy()
-#     print(f"Initial best reward: {best_reward:.2f}")
-#     for _ in range(num_iterations):
-#         max_reward = -np.inf
-#         for i in range(num_particles):
-#             # Update the velocity
-#             velocities[i] = w * velocities[i] + c1 * np.random.rand() * (personal_best_params[i] - particles[i]) + c2 * np.random.rand() * (best_params - particles[i])
-#             particles[i] += velocities[i]
-#             # Evaluate the new particle
-#             reward = evaluate_policy(particles[i])
-#             if i == 0:
-#                 max_reward = reward
-#             max_reward = max(max_reward, reward)
-#             if reward > personal_best_rewards[i]:
-#                 personal_best_rewards[i] = reward
-#                 personal_best_params[i] = particles[i].copy()
-#                 if reward > best_reward:
-#                     best_reward = reward
-#                     best_params = particles[i].copy()
-#                     np.savez("sav.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
-#                     print(f"Saved best reward: {best_reward:.2f}")
-#                     np.save(filename, best_params)
-#                     print(f"Saved best policy to {filename}")
-#         print(f"Iteration {_ + 1}/{num_iterations}, best reward: {best_reward:.2f}")
-#         print(f"Current reward: {max_reward:.2f}")
-#     return best_params    
-
 def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_policy.npy"):
     best_params = None  
     best_reward = -np.inf
@@ -94,7 +42,7 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
     personal_best_params = particles.copy()
     personal_best_rewards = np.full(num_particles, -np.inf)
 
-    if load and os.path.exists("sav.npz"):
+    if load and os.path.exists("sav_best_avg.npz"):
         print("Loading saved data...")
         data = np.load("sav.npz", allow_pickle=True)
         particles = data['particles']
@@ -106,22 +54,36 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
         print(f"Loaded best reward: {best_reward:.2f}")
 
     best_avg = -np.inf
+    no_improvement_count = 0  # Counter for iterations without improvement
 
     print("Training the agent using PSO...")
     with Pool() as pool:  # Create a multiprocessing pool
-        for _ in range(num_iterations):
+        for iteration in range(num_iterations):
+
+            if no_improvement_count >= 10:  # Trigger partial random restart
+                print("No improvement for 10 iterations. Performing partial random restart...")
+                num_reset_particles = int(0.3 * num_particles)  # 30% of particles
+                reset_indices = np.random.choice(num_particles, num_reset_particles, replace=False)
+                particles[reset_indices] = np.random.rand(num_reset_particles, num_params)
+                velocities[reset_indices] = np.zeros((num_reset_particles, num_params))
+                personal_best_params[reset_indices] = particles[reset_indices].copy()
+                personal_best_rewards[reset_indices] = -np.inf
+                no_improvement_count = 0  # Reset counter
+                
             # Evaluate all particles in parallel
             rewards = pool.map(evaluate_policy_single, particles)
             total_reward = sum(rewards)
             avg_reward = total_reward / num_particles
             if avg_reward > best_avg:
                 best_avg = avg_reward
+                no_improvement_count = 0  # Reset counter on improvement
                 print(f"Best average reward: {best_avg:.2f}")
                 np.savez("sav_best_avg.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
                 print(f"Saved best reward: {best_reward:.2f}")
                 np.save(filename, best_params)
-                print(f"Saved best policy to {"best_avg_policy.npy"}")
-
+                print(f"Saved best policy to {'best_avg_policy.npy'}")
+            else:
+                no_improvement_count += 1
 
             for i in range(num_particles):
                 reward = rewards[i]
@@ -131,11 +93,6 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
                     if reward > best_reward:
                         best_reward = reward
                         best_params = particles[i].copy()
-                        np.savez("sav.npz", particles=particles, velocities=velocities, personal_best_params=personal_best_params, personal_best_rewards=personal_best_rewards, best_params=best_params, best_reward=best_reward)
-                        print(f"Saved best reward: {best_reward:.2f}")
-                        np.save(filename, best_params)
-                        print(f"Saved best policy to {filename}")
-
                 # Update the velocity
                 velocities[i] = (
                     w * velocities[i]
@@ -144,7 +101,7 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
                 )
                 particles[i] += velocities[i]
 
-            print(f"Iteration {_ + 1}/{num_iterations}, best reward: {best_reward:.2f}")
+            print(f"Iteration {iteration + 1}/{num_iterations}, best reward: {best_reward:.2f}")
     return best_params
 
 def train_and_save(filename, num_particles = 100, num_iterations = 1000, c1 = 2.0, c2 = 2.0, w = 0.7, load = False):
