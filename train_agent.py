@@ -98,10 +98,10 @@ def pso(num_particles, num_iterations, w, c1, c2, load=False, filename="best_pol
                     + c1 * np.random.rand() * (personal_best_params[i] - particles[i])
                     + c2 * np.random.rand() * (best_params - particles[i])
                 )
-                velocities[i] = np.clip(velocities[i], -1, 1)
+                # velocities[i] = np.clip(velocities[i], -2, 2)
                 particles[i] += velocities[i]
                 
-                particles[i] = np.clip(particles[i], -5, 5)
+                # particles[i] = np.clip(particles[i], -5, 5)
 
             print(f"Iteration {iteration + 1}/{num_iterations}, best reward: {best_reward:.2f}")
     return best_params
